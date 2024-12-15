@@ -27,46 +27,58 @@ const express = require('express');
 const axios = require('axios');
 const app = express();
 const Papa = require('papaparse');
-
-const API_URL = 'https://hq1.appsflyer.com/api/agg-data/export/app/com.perfectday.earth8/daily_report/v5?from=2022-12-01&to=2024-12-31'; // Replace with your actual API URL
-const apitoken = process.env.API_TOKEN;
 const cors = require('cors');
+
+const API_URL_ANDROID = 'https://hq1.appsflyer.com/api/agg-data/export/app/com.perfectday.earth8/daily_report/v5?from=2024-12-01&to=2026-12-31';
+const API_URL_IPHONE = 'https://hq1.appsflyer.com/api/agg-data/export/app/com.perfectday.earth8/daily_report/v5?from=2024-12-01&to=2026-12-31';
+
+const apitoken = process.env.API_TOKEN;
+
 app.use(cors()); // Allow all origins by default
 
 app.get('/', async (req, res) => {
   try {
-    const response = await axios.get(API_URL, {
-      headers: {
-        "ngrok-skip-browser-warning": "69420",
-        'Authorization': `Bearer ${apitoken}`,
-        'Accept': 'text/csv',
-      },
-    });
+    // Function to fetch and calculate installs
+    const fetchInstalls = async (url) => {
+      const response = await axios.get(url, {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+          'Authorization': `Bearer ${apitoken}`,
+          'Accept': 'text/csv',
+        },
+      });
 
-    // Parse CSV to JSON
-    const parsedData = Papa.parse(response.data, {
-      header: true,
-      skipEmptyLines: true,
-    });
+      // Parse CSV to JSON
+      const parsedData = Papa.parse(response.data, {
+        header: true,
+        skipEmptyLines: true,
+      });
 
-    // Log the parsed data for debugging
-    //console.log('Parsed Data:', parsedData.data);
+      // Get today's date in YYYY-MM-DD format
+      const currentDate = new Date().toISOString().split('T')[0];
 
-    // Get today's date in YYYY-MM-DD format
-    const currentDate = new Date().toISOString().split('T')[0];
+      // Calculate total installs for today's date with "twitch" in the campaign field
+      return parsedData.data
+        .filter(item =>
+          item.Date === currentDate &&
+          item["Campaign (c)"] &&
+          /twitch/i.test(item["Campaign (c)"]) // Matches "twitch" case-insensitively
+        )
+        .reduce((sum, item) => sum + parseInt(item.Installs || 0, 10), 0);
+    };
 
-    // Calculate the total installs for today's date with "twitch" in the campaign field
-    const totalInstalls = parsedData.data
-      .filter(item =>
-        item.Date === currentDate &&
-        item["Campaign (c)"] &&
-        /twitch/i.test(item["Campaign (c)"]) // Matches "twitch" case-insensitively
-      )
-      .reduce((sum, item) => sum + parseInt(item.Installs || 0, 10), 0);
+    // Fetch installs for Android and iPhone in parallel
+    const [androidInstalls, iphoneInstalls] = await Promise.all([
+      fetchInstalls(API_URL_ANDROID),
+      fetchInstalls(API_URL_IPHONE)
+    ]);
 
-    console.log(`Total installs for ${currentDate} via twitch links: ${totalInstalls}`);
+    // Calculate total installs
+    const totalInstalls = androidInstalls + iphoneInstalls;
 
-    // Send JSON as the response with the total installs included
+    console.log(`Total installs for today via twitch links: ${totalInstalls}`);
+
+    // Send JSON response
     res.setHeader('Content-Type', 'application/json');
     res.json({
       totalInstalls
