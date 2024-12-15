@@ -30,7 +30,7 @@ const Papa = require('papaparse');
 const cors = require('cors');
 
 const API_URL_ANDROID = 'https://hq1.appsflyer.com/api/agg-data/export/app/com.perfectday.earth8/daily_report/v5?from=2024-12-01&to=2026-12-31';
-const API_URL_IPHONE = 'https://hq1.appsflyer.com/api/agg-data/export/app/com.perfectday.earth8/daily_report/v5?from=2024-12-01&to=2026-12-31';
+const API_URL_IPHONE = 'https://hq1.appsflyer.com/api/agg-data/export/app/id6478184997/daily_report/v5?from=2024-12-01&to=2026-12-31';
 
 const apitoken = process.env.API_TOKEN;
 
